@@ -11,8 +11,33 @@
 - **관리자 UI**: 대시보드(최근 실행), 데이터셋 목록, 실행 목록, 실행 상세(스텝 상태/로그/지표)
 - **API 문서**: FastAPI Swagger(`/api/docs`)
 
-> 실제 모델/전처리 로직은 `pipelines/` 폴더의 예시(Scikit-learn)로 구성되어 있으며,
+> 실제 모델/전처리 로직은 `pipelines/` 폴더의 예시(**sentence-transformers 기반 텍스트 분류**)로 구성되어 있으며,
 > 여러분의 도메인 전처리/모델로 대체하도록 설계했습니다.
+
+---
+
+## sentence-transformers 파이프라인
+
+현재 파이프라인은 CSV의 텍스트 컬럼을 [`paraphrase-multilingual-MiniLM-L12-v2`](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2) 모델로 임베딩하여 분류합니다.
+
+### 입력 데이터 형식 (`data/inbound/*.csv`)
+```
+text,label
+"다음 중 광합성의 산물로 옳은 것은?",science
+"이차방정식 x^2 - 5x + 6 = 0 의 두 근의 합은?",math
+...
+```
+- `text` 컬럼: 임베딩할 텍스트 (문제, 답변 등). `question`, `answer`, `content`, `sentence`도 자동 인식합니다.
+- `label` 컬럼: 분류 대상 레이블 (필수)
+
+샘플 파일: `data/inbound/sample.csv`
+
+### 파이프라인 단계
+| 단계 | 파일 | 설명 |
+|------|------|------|
+| preprocess | `pipelines/preprocess.py` | 텍스트 → 384차원 임베딩 벡터(emb_0~emb_383) 변환 |
+| train | `pipelines/train.py` | 임베딩 피처로 LogisticRegression 학습 |
+| evaluate | `pipelines/evaluate.py` | accuracy / f1 / precision / recall 산출 |
 
 ---
 
