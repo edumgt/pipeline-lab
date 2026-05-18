@@ -1,3 +1,6 @@
+# Workflow Diagram
+
+```mermaid
 flowchart TB
  subgraph L0["L0. 데이터 입수 영역 (NAS)"]
         NAS[("NAS 공유폴더<br>/inbound")]
@@ -59,3 +62,4 @@ flowchart TB
     API -- Run 재생성 + Queue --> Q
     WEB -- 격리 해제/복구(옵션) --> API
     API -- 복구 후 inbound로 이동(옵션) --> NAS
+```
