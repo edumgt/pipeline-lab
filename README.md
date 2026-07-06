@@ -61,9 +61,44 @@
 ---
 
 
+# 사내 업무 포탈 (제조 · 회계 · 세무)
+
+이 레포는 원래 시험 데이터용 AI 파이프라인 MVP였던 것을, **제조/회계/세무 도메인을 아우르는 사내 업무 포탈**로 고도화한 버전입니다.
+좌측 사이드바에서 도메인을 선택해 이동하는 **포탈 스타일 UI**를 제공하며, 각 도메인은 자체 DB 테이블/API/화면을 가진 독립 모듈로 구성되어 있습니다.
+
+## 포탈 구성
+
+- **대시보드**: 제조/회계/세무 핵심 지표를 한 화면에서 요약 조회
+- **🏭 제조**
+  - 생산실적(계획/실적/불량 수량 입력·조회)
+  - 설비관리(설비 등록, 가동/점검/고장 상태 관리)
+  - 품질검사(LOT 단위 합격/불합격 판정, 불량 사유 기록)
+  - AI 분석 파이프라인(기존 시험 데이터 ML 파이프라인 MVP: 데이터셋 등록 → 전처리 → 학습 → 평가)
+- **📒 회계**
+  - 전표입력(복식부기 분개, 차변/대변 합계 검증)
+  - 계정과목(자산/부채/자본/수익/비용 5분류 관리)
+  - 원장조회(계정별 거래내역 + 잔액 추적)
+  - 재무제표(요약) — 재무상태표/손익계산서 요약, 대차대조 일치 여부 확인
+- **🧾 세무**
+  - 세금계산서(매입/매출) 등록·조회 (부가세 10% 자동 계산)
+  - 부가가치세 신고 지원 — 분기별 매출세액/매입세액/납부(환급)세액 집계
+
+## 도메인별 백엔드 구조
+
+`apps/api/app/domains/{manufacturing,accounting,tax}/` 아래에 도메인별로 `models.py`(SQLAlchemy) / `schemas.py`(Pydantic) / `crud.py` / `routes.py`가 독립적으로 구성되어 있습니다. 새 도메인을 추가할 때는 이 패턴을 그대로 복제하고 `apps/api/app/main.py`에 라우터와 모델 임포트만 추가하면 됩니다.
+
+## 샘플 데이터 생성
+
+```bash
+docker compose exec api bash scripts/seed_domain_data.sh
+```
+제조(설비/생산실적/품질검사), 회계(계정과목/전표), 세무(세금계산서) 샘플 데이터를 한 번에 등록합니다.
+
+---
+
 # Exam AI Pipeline MVP (On-Prem, Docker Compose)
 
-시험 데이터(시계열)를 **입수 → 전처리 → 학습 → 평가**까지 자동으로 수행하고, **관리자 대시보드**에서 상태/이력/지표를 확인할 수 있는 **MVP 레포**입니다.
+시험 데이터(시계열)를 **입수 → 전처리 → 학습 → 평가**까지 자동으로 수행하고, **관리자 대시보드**에서 상태/이력/지표를 확인할 수 있는 **MVP 레포**입니다. 포탈 안에서는 "제조 > AI 분석 파이프라인" 메뉴로 접근합니다.
 
 ![](./workflow.png)
 
@@ -130,10 +165,22 @@ docker compose exec api bash scripts/seed_and_run_sample.sh
 ## 주요 폴더 구조
 ```
 apps/
-  api/        # FastAPI + SQLAlchemy + Celery(작업 트리거)
-  web/        # React(Vite) 관리자 페이지
-pipelines/    # preprocess/train/evaluate 예시 파이프라인
-scripts/      # 샘플 데이터 생성/실행 스크립트
+  api/
+    app/
+      domains/
+        manufacturing/  # 설비/생산실적/품질검사 (models/schemas/crud/routes)
+        accounting/     # 계정과목/전표/원장/재무제표
+        tax/            # 세금계산서/부가세신고
+      routes/, models.py, crud.py, schemas.py  # 기존 AI 파이프라인(Dataset/Run)
+  web/
+    src/
+      pages/
+        manufacturing/  # ProductionPage, EquipmentPage, QualityPage, AiPipelinePage
+        accounting/     # AccountsPage, JournalPage, LedgerPage, FinancialsPage
+        tax/            # InvoicesPage, VatReturnPage
+      nav.ts, components/Sidebar.tsx  # 포탈 사이드바 네비게이션
+pipelines/    # preprocess/train/evaluate 예시 파이프라인 (AI 분석 파이프라인 모듈에서 사용)
+scripts/      # 샘플 데이터 생성/실행 스크립트 (seed_domain_data.sh 포함)
 data/         # (볼륨) inbound/processed/models/logs 저장
 infra/        # nginx, db init
 ```
@@ -161,10 +208,28 @@ infra/        # nginx, db init
 ---
 
 ## API 요약
+
+### AI 분석 파이프라인 (제조 > AI 분석)
 - `GET /api/health`
 - `POST /api/datasets` / `GET /api/datasets`
 - `POST /api/runs` / `GET /api/runs` / `GET /api/runs/{run_id}`
 - `GET /api/runs/{run_id}/logs` (tail)
+
+### 제조 (생산관리)
+- `GET /api/manufacturing/summary`
+- `POST /api/manufacturing/equipment` / `GET /api/manufacturing/equipment` / `PATCH /api/manufacturing/equipment/{id}/status?status=`
+- `POST /api/manufacturing/production-records` / `GET /api/manufacturing/production-records`
+- `POST /api/manufacturing/quality-inspections` / `GET /api/manufacturing/quality-inspections`
+
+### 회계
+- `POST /api/accounting/accounts` / `GET /api/accounting/accounts`
+- `POST /api/accounting/journal-entries` / `GET /api/accounting/journal-entries` (차변/대변 합계 불일치 시 422)
+- `GET /api/accounting/accounts/{id}/ledger?as_of=`
+- `GET /api/accounting/financial-statements?as_of=`
+
+### 세무
+- `POST /api/tax/invoices` / `GET /api/tax/invoices?invoice_type=sales|purchase`
+- `GET /api/tax/vat-return?year=&quarter=`
 
 ---
 
