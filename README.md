@@ -1,160 +1,161 @@
-# 제조업 AI Agent 팀 구성 가이드
+[한국어](./readme-kr.md)
 
-제조업은 IT 도메인과 OT(Operational Technology, 현장 운영 기술) 도메인이 모두 얽혀 있어 일반적인 AI 프로젝트보다 팀 구성이 더 다양합니다.
+# Manufacturing AI Agent Team Composition Guide
 
-## 1) 리더십 / 기획 영역
+Manufacturing spans both the IT domain and the OT (Operational Technology) domain, so team composition is more diverse than in a typical AI project.
+
+## 1) Leadership / Planning
 
 - **Project Manager (PM) / Product Owner**  
-  프로젝트 전체 일정, 예산, 리소스를 관리하고 이해관계자 사이의 커뮤니케이션을 책임집니다. 제조업 특성상 현장(공장)과 본사 IT, 경영진 사이의 우선순위 조율이 중요한 역할입니다.
-- **Domain Expert (제조 도메인 전문가)**  
-  공정 엔지니어, 품질 관리자, 생산 관리자 등 현장을 가장 잘 아는 사람입니다. AI Agent가 풀어야 할 진짜 문제가 무엇인지 정의하고, 모델이 내놓은 결과가 현장에서 타당한지 검증합니다.
+  Manages the overall schedule, budget, and resources, and owns communication among stakeholders. In manufacturing, aligning priorities among the shop floor (the plant), corporate IT, and executives is a critical part of this role.
+- **Domain Expert (Manufacturing Domain Specialist)**  
+  Process engineers, quality managers, production managers, and others who know the shop floor best. They define the real problems an AI agent must solve and validate whether model outputs are sound in the field.
 - **Business Analyst**  
-  도메인 전문가의 요구사항을 기술팀이 이해할 수 있는 형태로 변환하고, ROI 분석과 KPI 설계를 담당합니다.
+  Translates domain-expert requirements into a form the technical team can understand, and owns ROI analysis and KPI design.
 
-## 2) AI / 데이터 영역
+## 2) AI / Data
 
 - **AI/ML Engineer**  
-  LLM 기반 Agent의 핵심 로직을 구현합니다. Prompt engineering, RAG 파이프라인 구축, Tool calling 설계, Agent orchestration(LangChain, LangGraph 등)을 담당합니다.
+  Implements the core logic of LLM-based agents. Responsible for prompt engineering, building the RAG pipeline, designing tool calling, and agent orchestration (LangChain, LangGraph, and similar).
 - **Data Scientist**  
-  제조 데이터(센서, 품질, 생산 실적 등)를 분석하고 예측 모델을 만듭니다. 이상 탐지, 수율 예측, 예지 보전 같은 전통적 ML 모델이 Agent의 도구로 활용되는 경우가 많습니다.
+  Analyzes manufacturing data (sensors, quality, production results, and so on) and builds predictive models. Traditional ML models such as anomaly detection, yield prediction, and predictive maintenance are often used as tools of the agent.
 - **Data Engineer**  
-  MES, ERP, SCADA, 센서 데이터 등 분산된 제조 데이터 소스를 통합하는 데이터 파이프라인을 구축합니다.
+  Builds data pipelines that integrate distributed manufacturing data sources such as MES, ERP, SCADA, and sensor data.
 - **MLOps Engineer**  
-  모델 배포, 모니터링, 재학습 파이프라인을 관리합니다. 제조 환경은 데이터 분포가 시간에 따라 변하므로 지속적인 모니터링이 필수입니다.
+  Manages model deployment, monitoring, and retraining pipelines. In manufacturing, data distributions drift over time, so continuous monitoring is essential.
 
-## 3) 엔지니어링 / 인프라 영역
+## 3) Engineering / Infrastructure
 
 - **Backend Engineer**  
-  Agent API, 인증, 데이터베이스, 외부 시스템 연동을 담당합니다. ERP/MES 같은 기간계 시스템과의 안전한 연동이 핵심입니다.
+  Owns the agent API, authentication, databases, and integration with external systems. Safe integration with systems of record such as ERP and MES is essential.
 - **Frontend Engineer**  
-  현장 작업자와 관리자가 Agent와 상호작용하는 UI를 만듭니다. 태블릿, 키오스크, HMI 화면 등 다양한 디바이스를 고려해야 합니다.
+  Builds the UI through which shop-floor operators and managers interact with the agent. Must account for a range of devices, including tablets, kiosks, and HMI screens.
 - **DevOps / Cloud Engineer**  
-  인프라 구축과 운영을 담당합니다. 제조업은 보안 이슈로 온프레미스나 하이브리드 클라우드를 쓰는 경우가 많습니다.
+  Builds and operates infrastructure. For security reasons, manufacturing often uses on-premises or hybrid cloud.
 - **OT/IoT Engineer**  
-  PLC, SCADA, 산업용 게이트웨이 등 현장 설비와 IT 시스템을 연결합니다. OPC-UA, Modbus 같은 산업용 프로토콜 전문성이 필요합니다.
+  Connects shop-floor equipment such as PLCs, SCADA, and industrial gateways to IT systems. Requires expertise in industrial protocols such as OPC-UA and Modbus.
 
-## 4) 품질 / 보안 / 규제 영역
+## 4) Quality / Security / Compliance
 
 - **QA Engineer**  
-  Agent의 응답 품질, 정확도, 안정성을 검증합니다. 제조업에서는 잘못된 판단이 생산 라인에 직접 영향을 줄 수 있어 더 엄격한 테스트가 필요합니다.
+  Validates the agent's response quality, accuracy, and stability. In manufacturing, a wrong decision can directly affect the production line, so testing must be stricter.
 - **Security Engineer**  
-  산업 제어 시스템(ICS) 보안, 데이터 유출 방지, 접근 권한 관리를 담당합니다.
+  Owns industrial control system (ICS) security, data-leak prevention, and access control.
 - **Compliance / Legal**  
-  ISO 9001, IATF 16949(자동차), GMP(제약), EU AI Act, GDPR 등 산업별 규제를 검토합니다.
+  Reviews industry-specific regulations such as ISO 9001, IATF 16949 (automotive), GMP (pharmaceuticals), the EU AI Act, and GDPR.
 
-## 5) 변화 관리 영역
+## 5) Change Management
 
 - **Change Management / Training Lead**  
-  현장 작업자와 관리자가 새 시스템을 받아들이도록 교육하고, 저항을 관리합니다.
+  Trains shop-floor operators and managers to adopt the new system and manages resistance to change.
 
-## 프로젝트 규모별 추천 구성
+## Recommended Composition by Project Scale
 
-전체 인원을 다 갖추기 어려우므로 규모에 따라 조정합니다.
+It is rarely practical to staff every role, so adjust the team by scale.
 
-- **소규모 PoC 단계**: PM 1명, 도메인 전문가 1명, AI Engineer 1~2명, Data Engineer 1명, OT Engineer 1명 등 약 5~6명으로 시작 가능
-- **양산 도입 단계**: 대부분의 역할이 필요하며 보통 15~25명 규모로 운영, 특히 MLOps/Security/Change Management 강화
+- **Small PoC stage**: Can start with about 5–6 people — 1 PM, 1 domain expert, 1–2 AI engineers, 1 data engineer, and 1 OT engineer
+- **Production rollout stage**: Most roles are required, typically a team of 15–25, with extra emphasis on MLOps, security, and change management
 
-## 제조업 특화 주의사항
+## Manufacturing-Specific Cautions
 
-일반 IT 프로젝트와 비교해 도메인 전문가 비중이 매우 커야 하고, OT 전문가가 반드시 포함되어야 하며, 현장 작업자의 디지털 리터러시 차이를 고려한 UX/교육 계획이 필요합니다.
+Compared with a typical IT project, the share of domain experts must be much larger, an OT specialist must be included, and the UX and training plan must account for differences in digital literacy among shop-floor operators.
 
 ---
 
+# Internal Operations Portal (Manufacturing · Accounting · Tax)
 
-# 사내 업무 포탈 (제조 · 회계 · 세무)
+This repository started as an AI pipeline MVP for exam data and has been evolved into an **internal operations portal spanning manufacturing, accounting, and tax**.
+It provides a **portal-style UI** for moving between domains from the left sidebar. Each domain is an independent module with its own database tables, API, and screens.
 
-이 레포는 원래 시험 데이터용 AI 파이프라인 MVP였던 것을, **제조/회계/세무 도메인을 아우르는 사내 업무 포탈**로 고도화한 버전입니다.
-좌측 사이드바에서 도메인을 선택해 이동하는 **포탈 스타일 UI**를 제공하며, 각 도메인은 자체 DB 테이블/API/화면을 가진 독립 모듈로 구성되어 있습니다.
+## Portal Structure
 
-## 포탈 구성
+- **Dashboard**: A single-screen summary of key manufacturing, accounting, and tax metrics
+- **🏭 Manufacturing**
+  - Production results (enter and query planned, actual, and defect quantities)
+  - Equipment management (register equipment; manage running, inspection, and failure status)
+  - Quality inspection (pass/fail decisions per LOT; record defect reasons)
+  - AI analysis pipeline (the existing exam-data ML pipeline MVP: register a dataset → preprocess → train → evaluate)
+- **📒 Accounting**
+  - Journal entry (double-entry bookkeeping; debit/credit total validation)
+  - Chart of accounts (manage the five classes: assets, liabilities, equity, revenue, and expenses)
+  - Ledger inquiry (transaction history and balance tracking by account)
+  - Financial statements (summary) — balance sheet and income statement summaries, plus a check that the trial balance agrees
+- **🧾 Tax**
+  - Register and query tax invoices (purchase and sales); VAT at 10% is calculated automatically
+  - VAT return support — quarterly aggregation of output tax, input tax, and tax payable (or refundable)
 
-- **대시보드**: 제조/회계/세무 핵심 지표를 한 화면에서 요약 조회
-- **🏭 제조**
-  - 생산실적(계획/실적/불량 수량 입력·조회)
-  - 설비관리(설비 등록, 가동/점검/고장 상태 관리)
-  - 품질검사(LOT 단위 합격/불합격 판정, 불량 사유 기록)
-  - AI 분석 파이프라인(기존 시험 데이터 ML 파이프라인 MVP: 데이터셋 등록 → 전처리 → 학습 → 평가)
-- **📒 회계**
-  - 전표입력(복식부기 분개, 차변/대변 합계 검증)
-  - 계정과목(자산/부채/자본/수익/비용 5분류 관리)
-  - 원장조회(계정별 거래내역 + 잔액 추적)
-  - 재무제표(요약) — 재무상태표/손익계산서 요약, 대차대조 일치 여부 확인
-- **🧾 세무**
-  - 세금계산서(매입/매출) 등록·조회 (부가세 10% 자동 계산)
-  - 부가가치세 신고 지원 — 분기별 매출세액/매입세액/납부(환급)세액 집계
+## Backend Structure by Domain
 
-## 도메인별 백엔드 구조
+Under `apps/api/app/domains/{manufacturing,accounting,tax}/`, each domain independently has `models.py` (SQLAlchemy), `schemas.py` (Pydantic), `crud.py`, and `routes.py`. To add a new domain, copy this pattern and add only the router and model imports in `apps/api/app/main.py`.
 
-`apps/api/app/domains/{manufacturing,accounting,tax}/` 아래에 도메인별로 `models.py`(SQLAlchemy) / `schemas.py`(Pydantic) / `crud.py` / `routes.py`가 독립적으로 구성되어 있습니다. 새 도메인을 추가할 때는 이 패턴을 그대로 복제하고 `apps/api/app/main.py`에 라우터와 모델 임포트만 추가하면 됩니다.
-
-## 샘플 데이터 생성
+## Generating Sample Data
 
 ```bash
 docker compose exec api bash scripts/seed_domain_data.sh
 ```
-제조(설비/생산실적/품질검사), 회계(계정과목/전표), 세무(세금계산서) 샘플 데이터를 한 번에 등록합니다.
+Registers sample data for manufacturing (equipment, production records, and quality inspections), accounting (chart of accounts and journal entries), and tax (tax invoices) in one step.
 
 ---
 
 # Exam AI Pipeline MVP (On-Prem, Docker Compose)
 
-시험 데이터(시계열)를 **입수 → 전처리 → 학습 → 평가**까지 자동으로 수행하고, **관리자 대시보드**에서 상태/이력/지표를 확인할 수 있는 **MVP 레포**입니다. 포탈 안에서는 "제조 > AI 분석 파이프라인" 메뉴로 접근합니다.
+An **MVP repository** that automatically runs exam (time-series) data through **ingest → preprocess → train → evaluate**, and lets you inspect status, history, and metrics from an **admin dashboard**. Inside the portal, open it from **Manufacturing > AI Analysis Pipeline**.
 
 ![](./workflow.png)
 
-## MVP에서 제공하는 것
-- **데이터 입수 등록**: 로컬 파일 경로 기반(온프레미스 파일서버/공유폴더 마운트 가정)
-- **파이프라인 실행**: `preprocess → train → evaluate` (Celery worker)
-- **상태/이력/로그/지표 저장**: PostgreSQL + 파일 로그
-- **관리자 UI**: 대시보드(최근 실행), 데이터셋 목록, 실행 목록, 실행 상세(스텝 상태/로그/지표)
-- **API 문서**: FastAPI Swagger(`/api/docs`)
+## What the MVP Provides
+- **Dataset registration**: Based on a local file path (assumes an on-premises file server or a mounted shared folder)
+- **Pipeline execution**: `preprocess → train → evaluate` (Celery worker)
+- **Status, history, logs, and metrics storage**: PostgreSQL + file logs
+- **Admin UI**: Dashboard (recent runs), dataset list, run list, and run detail (step status, logs, and metrics)
+- **API docs**: FastAPI Swagger (`/api/docs`)
 
-> 실제 모델/전처리 로직은 `pipelines/` 폴더의 예시(**sentence-transformers 기반 텍스트 분류**)로 구성되어 있으며,
-> 여러분의 도메인 전처리/모델로 대체하도록 설계했습니다.
+> The actual model and preprocessing logic is an example in the `pipelines/` folder (**text classification based on sentence-transformers**),
+> and is designed so you can replace it with preprocessing and models for your own domain.
 
 ---
 
-## sentence-transformers 파이프라인
+## sentence-transformers Pipeline
 
-현재 파이프라인은 CSV의 텍스트 컬럼을 [`paraphrase-multilingual-MiniLM-L12-v2`](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2) 모델로 임베딩하여 분류합니다.
+The current pipeline embeds the text column of a CSV with the [`paraphrase-multilingual-MiniLM-L12-v2`](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2) model and classifies it.
 
-### 입력 데이터 형식 (`data/inbound/*.csv`)
+### Input Data Format (`data/inbound/*.csv`)
 ```
 text,label
 "다음 중 광합성의 산물로 옳은 것은?",science
 "이차방정식 x^2 - 5x + 6 = 0 의 두 근의 합은?",math
 ...
 ```
-- `text` 컬럼: 임베딩할 텍스트 (문제, 답변 등). `question`, `answer`, `content`, `sentence`도 자동 인식합니다.
-- `label` 컬럼: 분류 대상 레이블 (필수)
+- `text` column: text to embed (questions, answers, and so on). `question`, `answer`, `content`, and `sentence` are also recognized automatically.
+- `label` column: classification label (required)
 
-샘플 파일: `data/inbound/sample.csv`
+Sample file: `data/inbound/sample.csv`
 
-### 파이프라인 단계
-| 단계 | 파일 | 설명 |
+### Pipeline Stages
+| Stage | File | Description |
 |------|------|------|
-| preprocess | `pipelines/preprocess.py` | 텍스트 → 384차원 임베딩 벡터(emb_0~emb_383) 변환 |
-| train | `pipelines/train.py` | 임베딩 피처로 LogisticRegression 학습 |
-| evaluate | `pipelines/evaluate.py` | accuracy / f1 / precision / recall 산출 |
+| preprocess | `pipelines/preprocess.py` | Convert text into 384-dimensional embedding vectors (`emb_0`–`emb_383`) |
+| train | `pipelines/train.py` | Train LogisticRegression on the embedding features |
+| evaluate | `pipelines/evaluate.py` | Compute accuracy, F1, precision, and recall |
 
 ---
 
-## 빠른 시작
-### 1) 요구사항
-- Docker Desktop(또는 Docker Engine) + Docker Compose
+## Quick Start
+### 1) Requirements
+- Docker Desktop (or Docker Engine) + Docker Compose
 
-### 2) 실행
+### 2) Run
 ```bash
 cd exam-ai-pipeline-mvp
 cp .env.example .env
 docker compose up -d --build
 ```
 
-### 3) 접속
+### 3) Access
 - Admin UI: http://localhost:8080
 - API (Swagger): http://localhost:8080/api/docs
 
-### 4) 샘플 데이터 생성 & 실행
+### 4) Generate and Run Sample Data
 ```bash
 docker compose exec api python scripts/generate_sample_data.py
 docker compose exec api bash scripts/seed_and_run_sample.sh
@@ -162,99 +163,99 @@ docker compose exec api bash scripts/seed_and_run_sample.sh
 
 ---
 
-## 주요 폴더 구조
+## Key Folder Structure
 ```
 apps/
   api/
     app/
       domains/
-        manufacturing/  # 설비/생산실적/품질검사 (models/schemas/crud/routes)
-        accounting/     # 계정과목/전표/원장/재무제표
-        tax/            # 세금계산서/부가세신고
-      routes/, models.py, crud.py, schemas.py  # 기존 AI 파이프라인(Dataset/Run)
+        manufacturing/  # equipment / production records / quality inspections (models/schemas/crud/routes)
+        accounting/     # chart of accounts / journal entries / ledger / financial statements
+        tax/            # tax invoices / VAT return
+      routes/, models.py, crud.py, schemas.py  # existing AI pipeline (Dataset/Run)
   web/
     src/
       pages/
         manufacturing/  # ProductionPage, EquipmentPage, QualityPage, AiPipelinePage
         accounting/     # AccountsPage, JournalPage, LedgerPage, FinancialsPage
         tax/            # InvoicesPage, VatReturnPage
-      nav.ts, components/Sidebar.tsx  # 포탈 사이드바 네비게이션
-pipelines/    # preprocess/train/evaluate 예시 파이프라인 (AI 분석 파이프라인 모듈에서 사용)
-scripts/      # 샘플 데이터 생성/실행 스크립트 (seed_domain_data.sh 포함)
-data/         # (볼륨) inbound/processed/models/logs 저장
+      nav.ts, components/Sidebar.tsx  # portal sidebar navigation
+pipelines/    # example preprocess/train/evaluate pipeline (used by the AI analysis pipeline module)
+scripts/      # sample data generation and run scripts (includes seed_domain_data.sh)
+data/         # (volume) storage for inbound/processed/models/logs
 infra/        # nginx, db init
 ```
 
 ---
 
-## 파이프라인 동작 개요
-1. `POST /api/datasets` 로 데이터셋 등록 (예: inbound 폴더 내 파일)
-2. `POST /api/runs` 로 실행 생성 (dataset_id + model_type)
-3. Celery worker가 스텝을 순서대로 수행
-   - preprocess: 정제/변환 후 processed로 저장
-   - train: 모델 학습 후 models로 저장
-   - evaluate: 성능 지표 산출(metrics.json) + DB 업데이트
-4. UI에서 상태/이력/로그/지표 조회
+## Pipeline Flow
+1. Register a dataset with `POST /api/datasets` (for example, a file in the inbound folder)
+2. Create a run with `POST /api/runs` (`dataset_id` + `model_type`)
+3. The Celery worker executes the steps in order
+   - preprocess: clean and transform, then save to processed
+   - train: train the model and save it to models
+   - evaluate: compute performance metrics (`metrics.json`) and update the database
+4. Query status, history, logs, and metrics in the UI
 
 ---
 
-## 커스터마이징 포인트
-- 전처리: `pipelines/preprocess.py`
-- 학습: `pipelines/train.py`
-- 평가/지표: `pipelines/evaluate.py`
-- 실행 정책/스텝 체인: `apps/api/app/workers/tasks.py`
-- 데이터 입수 방식(폴더 감시, SFTP, NAS 등): `apps/api/app/services/ingest.py` (MVP는 경로 기반)
+## Customization Points
+- Preprocessing: `pipelines/preprocess.py`
+- Training: `pipelines/train.py`
+- Evaluation and metrics: `pipelines/evaluate.py`
+- Execution policy and step chain: `apps/api/app/workers/tasks.py`
+- Data ingest method (folder watch, SFTP, NAS, and so on): `apps/api/app/services/ingest.py` (the MVP is path-based)
 
 ---
 
-## API 요약
+## API Summary
 
-### AI 분석 파이프라인 (제조 > AI 분석)
+### AI Analysis Pipeline (Manufacturing > AI Analysis)
 - `GET /api/health`
 - `POST /api/datasets` / `GET /api/datasets`
 - `POST /api/runs` / `GET /api/runs` / `GET /api/runs/{run_id}`
 - `GET /api/runs/{run_id}/logs` (tail)
 
-### 제조 (생산관리)
+### Manufacturing (Production Management)
 - `GET /api/manufacturing/summary`
 - `POST /api/manufacturing/equipment` / `GET /api/manufacturing/equipment` / `PATCH /api/manufacturing/equipment/{id}/status?status=`
 - `POST /api/manufacturing/production-records` / `GET /api/manufacturing/production-records`
 - `POST /api/manufacturing/quality-inspections` / `GET /api/manufacturing/quality-inspections`
 
-### 회계
+### Accounting
 - `POST /api/accounting/accounts` / `GET /api/accounting/accounts`
-- `POST /api/accounting/journal-entries` / `GET /api/accounting/journal-entries` (차변/대변 합계 불일치 시 422)
+- `POST /api/accounting/journal-entries` / `GET /api/accounting/journal-entries` (returns 422 if debit and credit totals do not match)
 - `GET /api/accounting/accounts/{id}/ledger?as_of=`
 - `GET /api/accounting/financial-statements?as_of=`
 
-### 세무
+### Tax
 - `POST /api/tax/invoices` / `GET /api/tax/invoices?invoice_type=sales|purchase`
 - `GET /api/tax/vat-return?year=&quarter=`
 
 ---
 
-## 라이선스
-Internal MVP template. 필요에 따라 사내 정책에 맞춰 조정하세요.
+## License
+Internal MVP template. Adjust it to match internal policy as needed.
 
 ---
 
-## NAS 폴더 감시(Watcher) 동작
-이 레포는 `watcher` 서비스가 `/data/inbound` 폴더를 감시하여 파일이 들어오면 자동으로:
-1) 파일 완전성 체크(크기 변화가 STABLE_SECONDS 동안 없으면 완료)
-2) Dataset 자동 등록 (`POST /api/datasets`)
-3) Run 자동 생성 + 파이프라인 실행 (`POST /api/runs`)
+## NAS Folder Watcher
+The `watcher` service in this repository watches `/data/inbound`. When a file arrives, it automatically:
+1) Checks file completeness (treats the upload as finished if the size does not change for `STABLE_SECONDS`)
+2) Registers a dataset (`POST /api/datasets`)
+3) Creates a run and starts the pipeline (`POST /api/runs`)
 
-### 설정(환경변수)
-- `STABLE_SECONDS`: 업로드 완료 판단 기준(초)
-- `USE_DONE_FILE=true` 로 설정하면 `*.csv.done` 같은 완료 파일이 존재할 때만 처리합니다.
-- `INCLUDE_EXT`: 감시 대상 확장자
+### Settings (environment variables)
+- `STABLE_SECONDS`: seconds used to decide that an upload is complete
+- When `USE_DONE_FILE=true`, a file is processed only if a completion marker such as `*.csv.done` exists
+- `INCLUDE_EXT`: file extensions to watch
 
-### 테스트
+### Test
 ```bash
-# 샘플 데이터 생성(컨테이너 내부 /data/inbound)
+# Generate sample data (inside the container at /data/inbound)
 docker compose exec api python scripts/generate_sample_data.py
 
-# watcher 로그 확인
+# Check watcher logs
 docker compose logs -f watcher
 ```
 ---
