@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam AI Pipeline MVP - 3D Architecture (Docker Compose On-Prem)</title>
+  <script>if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');</script>
+  <!-- Keep the original 3D scene available without relying on external script CDNs. -->
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/OrbitControls.js"></script>
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    html.embed .hud-layer { display: none; }
+    html.embed .node-label-3d { font-size: 10px; }
+    html.embed .node-label-3d[data-node-id="storage"],
+    html.embed .node-label-3d[data-node-id="postgres"],
+    html.embed .node-label-3d[data-node-id="hardware"] { display: none; }
+    :root {
+      --bg-color: #080c14;
+      --panel-bg: rgba(13, 20, 36, 0.78);
+      --panel-border: rgba(64, 150, 255, 0.25);
+      --panel-hover: rgba(64, 150, 255, 0.4);
+      --accent-cyan: #00f3ff;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-purple: #a855f7;
+      --accent-rose: #f43f5e;
+      --text-main: #f1f5f9;
+      --text-sub: #94a3b8;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-sans: 'Pretendard', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      font-family: var(--font-sans);
+      color: var(--text-main);
+    }
+
+    #webgl-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    /* UI Layout Overlay */
+    .hud-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+    }
+
+    .interactive {
+      pointer-events: auto;
+    }
+
+    /* Header */
+    .header-panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(12px);
+      border-radius: 14px;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(0, 243, 255, 0.1);
+      max-width: 100%;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .badge-mvp {
+      background: linear-gradient(135deg, #0284c7, #06b6d4);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+    }
+
+    .title-text h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-text h1 span.repo-name {
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      font-size: 17px;
+    }
+
+    .title-text p {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+
+    /* View Controls */
+    .view-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn-view {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-view:hover {
+      background: rgba(0, 243, 255, 0.15);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      transform: translateY(-1px);
+    }
+
+    .btn-view.active {
+      background: var(--accent-cyan);
+      color: #050b14;
+      font-weight: 700;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+    }
+
+    /* Main Area layout: Sidebar and Canvas */
+    .center-container {
+      display: flex;
+      justify-content: space-between;
+      height: calc(100% - 150px);
+      margin: 15px 0;
+      gap: 20px;
+    }
+
+    /* Left Stats / Legend Panel */
+    .legend-panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(12px);
+      border-radius: 14px;
+      width: 290px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      overflow-y: auto;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 8px;
+    }
+
+    .legend-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .legend-item:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: var(--panel-border);
+      transform: translateX(4px);
+    }
+
+    .legend-color-tag {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .color-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .port-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #93c5fd;
+    }
+
+    /* Pipeline Step Tracker */
+    .pipeline-stepper {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .step-node {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      position: relative;
+    }
+
+    .step-node:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 24px;
+      width: 2px;
+      height: calc(100% - 10px);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .step-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(30, 41, 59, 0.9);
+      border: 2px solid var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: bold;
+      color: var(--accent-cyan);
+      z-index: 2;
+    }
+
+    .step-node.active .step-circle {
+      background: var(--accent-cyan);
+      color: #030712;
+      box-shadow: 0 0 10px var(--accent-cyan);
+    }
+
+    .step-info h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    .step-info p {
+      font-size: 11px;
+      color: var(--text-sub);
+      line-height: 1.4;
+    }
+
+    /* Right Detail Inspector Panel */
+    .detail-panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(14px);
+      border-radius: 14px;
+      width: 360px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: 0 10px 35px rgba(0,0,0,0.6);
+      transform: translateX(0);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow-y: auto;
+    }
+
+    .detail-panel.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(30px);
+    }
+
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 14px;
+    }
+
+    .detail-type {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent-cyan);
+      margin-bottom: 4px;
+    }
+
+    .detail-name {
+      font-size: 20px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--text-sub);
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .close-btn:hover {
+      color: #fff;
+    }
+
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .spec-table tr {
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .spec-table td {
+      padding: 8px 4px;
+    }
+
+    .spec-label {
+      color: var(--text-sub);
+      width: 38%;
+      font-weight: 500;
+    }
+
+    .spec-value {
+      color: #e2e8f0;
+      font-family: var(--font-mono);
+      word-break: break-all;
+    }
+
+    .badge-tech {
+      display: inline-block;
+      padding: 2px 8px;
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #93c5fd;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+
+    .code-box {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #a5f3fc;
+      line-height: 1.5;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    /* Footer Bar */
+    .footer-bar {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      backdrop-filter: blur(12px);
+      border-radius: 14px;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 -5px 25px rgba(0,0,0,0.4);
+    }
+
+    .help-hints {
+      display: flex;
+      gap: 20px;
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .hint-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .key-badge {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #fff;
+    }
+
+    .flow-toggle-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .switch-label {
+      font-size: 13px;
+      color: var(--text-sub);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 3D Label Markers (Canvas-projected) */
+    .node-label-3d {
+      position: absolute;
+      background: rgba(9, 14, 26, 0.85);
+      border: 1px solid rgba(0, 243, 255, 0.4);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: #e0f2fe;
+      pointer-events: none;
+      transform: translate(-50%, -100%);
+      white-space: nowrap;
+      transition: opacity 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      z-index: 5;
+    }
+
+    .node-label-3d::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 5px 5px 0 5px;
+      border-style: solid;
+      border-color: rgba(0, 243, 255, 0.5) transparent transparent transparent;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.2);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-cyan);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Three.js Canvas -->
+  <div id="canvas-container">
+    <canvas id="webgl-canvas"></canvas>
+  </div>
+
+  <!-- HUD Interface Layer -->
+  <div class="hud-layer">
+    <!-- Top Header -->
+    <header class="header-panel interactive">
+      <div class="brand-title">
+        <span class="badge-mvp">On-Prem Docker Stack</span>
+        <div class="title-text">
+          <h1>Exam AI Pipeline MVP <span class="repo-name">[pipeline-lab]</span></h1>
+          <p>On-Premise Docker Compose 기반 시험 시계열 AI 자동화 & 도메인 통합 포탈</p>
+        </div>
+      </div>
+
+      <!-- Quick Camera Presets -->
+      <div class="view-controls">
+        <button class="btn-view active" onclick="setCameraView(this, 'iso')">🌐 3D Overview</button>
+        <button class="btn-view" onclick="setCameraView(this, 'pipeline')">⚡ AI Pipeline View</button>
+        <button class="btn-view" onclick="setCameraView(this, 'backend')">🖥️ Docker Services</button>
+        <button class="btn-view" onclick="setCameraView(this, 'top')">📐 Architecture Top</button>
+      </div>
+    </header>
+
+    <!-- Center Content (Sidebar + Inspector) -->
+    <div class="center-container">
+      <!-- Left Legend & Pipeline Status -->
+      <aside class="legend-panel interactive">
+        <div class="section-title">📦 Docker Compose Services</div>
+        <div class="legend-list" id="services-legend">
+          <!-- Dynamically filled -->
+        </div>
+
+        <div class="section-title" style="margin-top: 10px;">🔄 AI Pipeline Flow</div>
+        <div class="pipeline-stepper">
+          <div class="step-node active" id="step-ingest" onclick="focusNode('watcher')">
+            <div class="step-circle">1</div>
+            <div class="step-info">
+              <h4>NAS Inbound Ingest</h4>
+              <p>Watcher가 /data/inbound 감시 후 안정성 체크 시 자동 API 등록</p>
+            </div>
+          </div>
+          <div class="step-node" id="step-prep" onclick="focusNode('worker')">
+            <div class="step-circle">2</div>
+            <div class="step-info">
+              <h4>Preprocess (MiniLM)</h4>
+              <p>텍스트 → 384차원 다국어 임베딩 벡터 변환 (/data/processed)</p>
+            </div>
+          </div>
+          <div class="step-node" id="step-train" onclick="focusNode('worker')">
+            <div class="step-circle">3</div>
+            <div class="step-info">
+              <h4>Train (Logistic Reg)</h4>
+              <p>임베딩 피처 기반 모델 학습 및 가중치 저장 (/data/models)</p>
+            </div>
+          </div>
+          <div class="step-node" id="step-eval" onclick="focusNode('worker')">
+            <div class="step-circle">4</div>
+            <div class="step-info">
+              <h4>Evaluate & Metrics</h4>
+              <p>Accuracy, F1, Precision 계산 및 DB 업데이트, metrics.json 산출</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right Node Details Panel (Modal-like) -->
+      <aside class="detail-panel interactive" id="detail-panel">
+        <div class="detail-header">
+          <div>
+            <div class="detail-type" id="detail-type">DOCKER CONTAINER</div>
+            <div class="detail-name" id="detail-name">FastAPI Backend (api)</div>
+          </div>
+          <button class="close-btn" onclick="closeDetailPanel()">✕</button>
+        </div>
+
+        <div id="detail-tags">
+          <span class="badge-tech">Python 3.11</span>
+          <span class="badge-tech">FastAPI</span>
+          <span class="badge-tech">SQLAlchemy</span>
+        </div>
+
+        <p id="detail-desc" style="font-size: 13px; color: var(--text-sub); line-height: 1.5;">
+          파이프라인 실행 제어 및 데이터셋 메타데이터 등록, 도메인(제조, 회계, 세무) API 엔드포인트를 서빙합니다.
+        </p>
+
+        <div class="section-title">⚙️ Configuration & Specs</div>
+        <table class="spec-table">
+          <tbody id="detail-specs">
+            <!-- Dynamic specs table rows -->
+          </tbody>
+        </table>
+
+        <div class="section-title">📂 Mounted Volumes & Dependencies</div>
+        <div class="code-box" id="detail-code">
+          # Volume mounts & depends_on
+        </div>
+      </aside>
+    </div>
+
+    <!-- Bottom Control Bar -->
+    <footer class="footer-bar interactive">
+      <div class="help-hints">
+        <div class="hint-item"><span class="key-badge">좌클릭 + 드래그</span> 3D 회전</div>
+        <div class="hint-item"><span class="key-badge">우클릭 + 드래그</span> 카메라 이동</div>
+        <div class="hint-item"><span class="key-badge">마우스 휠</span> 줌 인/아웃</div>
+        <div class="hint-item"><span class="key-badge">객체 클릭</span> 상세 제원 검사</div>
+      </div>
+
+      <div class="flow-toggle-group">
+        <label class="switch-label">
+          <input type="checkbox" id="flow-particles-toggle" checked onchange="toggleParticles(this.checked)">
+          <span>데이터 파이프라인 스트림 파티클 활성화</span>
+        </label>
+        <button class="btn-view" onclick="resetCamera()">🔄 Reset View</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Dynamic 3D Label Container -->
+  <div id="labels-container"></div>
+
+  <!-- Three.js Visual Script -->
+  <script>
+    /* ========================================================
+       DATA DEFINITIONS : Exam AI Pipeline MVP Architecture
+       ======================================================== */
+    const ARCHITECTURE_DATA = {
+      services: [
+        {
+          id: 'nginx',
+          name: 'Nginx Gateway',
+          type: 'Reverse Proxy & Static Web',
+          image: 'nginx:1.27',
+          color: 0x10b981, // Emerald Green
+          pos: [-10, 4, 12],
+          size: [3.2, 3.8, 3.2],
+          ports: '8080:80',
+          depends_on: ['api', 'web'],
+          mounts: ['./infra/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro'],
+          desc: '외부 온프레미스 유저의 단일 진입점입니다. 8080 포트를 통해 Admin Web UI 및 /api 라우트를 분기 중계합니다.',
+          tags: ['Nginx 1.27', 'Reverse Proxy', 'Port 8080']
+        },
+        {
+          id: 'web',
+          name: 'Admin Web UI (web)',
+          type: 'Frontend Portal (React)',
+          image: 'apps/web (Dockerfile)',
+          color: 0x06b6d4, // Cyan
+          pos: [-10, 4, 4],
+          size: [3.2, 3.6, 3.2],
+          ports: 'Expose 8081',
+          depends_on: ['api'],
+          mounts: ['Vite Build artifacts'],
+          desc: '제조·회계·세무 통합 포탈 및 AI 파이프라인 관리용 대시보드입니다. 상태/이력/로그/지표를 시각화합니다.',
+          tags: ['React', 'TypeScript', 'Vite', 'Tailwind']
+        },
+        {
+          id: 'api',
+          name: 'FastAPI Backend (api)',
+          type: 'API & Ingest Controller',
+          image: 'apps/api (Dockerfile)',
+          color: 0x3b82f6, // Blue
+          pos: [0, 4, 4],
+          size: [4.0, 4.4, 3.8],
+          ports: 'Expose 8000',
+          depends_on: ['postgres', 'redis'],
+          mounts: ['./data:/data', './pipelines:/app/pipelines:ro', './scripts:/app/scripts:ro'],
+          desc: '데이터셋 등록(POST /api/datasets), 파이프라인 실행 생성(POST /api/runs), 도메인 엔드포인트를 제공합니다.',
+          tags: ['Python 3.11', 'FastAPI', 'SQLAlchemy', 'Pydantic']
+        },
+        {
+          id: 'redis',
+          name: 'Redis Queue',
+          type: 'Message Broker & Task Queue',
+          image: 'redis:7',
+          color: 0xef4444, // Red
+          pos: [8, 3.2, 4],
+          size: [3.0, 3.2, 3.0],
+          ports: '6379:6379',
+          depends_on: [],
+          mounts: ['In-Memory Queue'],
+          desc: '비동기 AI 파이프라인 작업을 Celery Worker로 중계하는 큐 브로커입니다. default 큐를 관리합니다.',
+          tags: ['Redis 7', 'In-Memory', 'Port 6379']
+        },
+        {
+          id: 'worker',
+          name: 'Celery ML Worker (worker)',
+          type: 'AI Execution Engine (CPU)',
+          image: 'apps/api (Dockerfile)',
+          color: 0xa855f7, // Purple
+          pos: [8, 4.5, -6],
+          size: [4.2, 4.8, 4.0],
+          ports: 'Internal Queue Worker',
+          depends_on: ['postgres', 'redis'],
+          mounts: ['./data:/data', './pipelines:/app/pipelines:ro'],
+          desc: 'Preprocess → Train → Evaluate 스텝 체인을 실제 수행하는 백그라운드 워커입니다. 로그와 지표를 생성합니다.',
+          tags: ['Celery', 'sentence-transformers', 'scikit-learn']
+        },
+        {
+          id: 'postgres',
+          name: 'PostgreSQL DB',
+          type: 'Relational Database',
+          image: 'postgres:16',
+          color: 0x6366f1, // Indigo
+          pos: [0, 3.8, -6],
+          size: [3.4, 4.2, 3.4],
+          ports: '5432:5432',
+          depends_on: [],
+          mounts: ['pgdata:/var/lib/postgresql/data', './infra/postgres/init.sql'],
+          desc: '데이터셋 메타, 실행 이력(Run/Step), 평가 지표(Metrics), 제조/회계/세무 전표 데이터를 영구 저장합니다.',
+          tags: ['PostgreSQL 16', 'Relational DB', 'ACID']
+        },
+        {
+          id: 'watcher',
+          name: 'NAS Inbound Watcher',
+          type: 'Folder Watchdog Daemon',
+          image: 'apps/watcher (Dockerfile)',
+          color: 0xf59e0b, // Amber
+          pos: [-10, 3.4, -6],
+          size: [3.2, 3.5, 3.2],
+          ports: 'Background Daemon',
+          depends_on: ['api'],
+          mounts: ['./data:/data (WATCH_DIR: /data/inbound)'],
+          desc: 'NAS 공유폴더 /data/inbound 를 1초 주기로 감시하며, 파일 크기 안정성(STABLE_SECONDS: 10s) 검증 후 API에 자동 실행을 요청합니다.',
+          tags: ['Python Watchdog', 'NAS Integration', 'Auto Ingest']
+        },
+        {
+          id: 'storage',
+          name: 'Shared Storage (/data)',
+          type: 'On-Premise Host Volume',
+          image: 'Host Mount Volume',
+          color: 0xeab308, // Gold
+          pos: [-2, 1.2, -14],
+          size: [16, 1.8, 5.0],
+          ports: 'Local / NFS Storage',
+          depends_on: [],
+          mounts: ['/data/inbound', '/data/processed', '/data/models', '/data/logs'],
+          desc: '온프레미스 NAS나 서버 로컬 디스크에 마운트되는 통합 데이터 볼륨입니다. CSV 원본, 임베딩, 모델 가중치, 로그가 저장됩니다.',
+          tags: ['Host Volume', 'CSV / Parquet', 'Models & Embeddings']
+        },
+        {
+          id: 'hardware',
+          name: '시험 장비 / OT Source',
+          type: 'Industrial Testing Equipment',
+          image: 'External Hardware System',
+          color: 0x64748b, // Slate
+          pos: [-14, 2.0, -14],
+          size: [4.0, 3.0, 3.5],
+          ports: 'FTP / SMB / Network Share',
+          depends_on: [],
+          mounts: ['Export -> /data/inbound'],
+          desc: '현장 시계열 시험 장비, 센서 또는 MES/ERP 기간계 시스템으로, 분석 대상 원본 CSV 시험 데이터를 생성하여 저장소로 푸시합니다.',
+          tags: ['OT Hardware', 'Sensor Data', 'CSV Producer']
+        }
+      ],
+      // Data stream flows between nodes for animated visual tubes and particles
+      flows: [
+        { from: 'hardware', to: 'storage', color: 0x94a3b8, label: '시험 데이터 CSV 저장' },
+        { from: 'storage', to: 'watcher', color: 0xf59e0b, label: '폴더 감시 및 완전성 체크' },
+        { from: 'watcher', to: 'api', color: 0x3b82f6, label: 'POST /api/datasets & runs' },
+        { from: 'api', to: 'redis', color: 0xef4444, label: '작업 큐 등록 (Task Dispatch)' },
+        { from: 'redis', to: 'worker', color: 0xa855f7, label: 'Celery Worker 작업 수신' },
+        { from: 'worker', to: 'storage', color: 0xeab308, label: 'processed & models 저장' },
+        { from: 'worker', to: 'postgres', color: 0x6366f1, label: '실행 상태 & 지표 DB 갱신' },
+        { from: 'api', to: 'postgres', color: 0x6366f1, label: '메타데이터 CRUD' },
+        { from: 'nginx', to: 'api', color: 0x10b981, label: 'API 프록시 (/api)' },
+        { from: 'nginx', to: 'web', color: 0x06b6d4, label: 'Admin Web 포탈 프록시' }
+      ]
+    };
+
+    /* ========================================================
+       THREE.JS SETUP & SCENE INITIALIZATION
+       ======================================================== */
+    const canvas = document.getElementById('webgl-canvas');
+    const labelsContainer = document.getElementById('labels-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x060911);
+    scene.fog = new THREE.FogExp2(0x060911, 0.015);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(24, 26, 32);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05; // Don't go below floor
+    controls.minDistance = 8;
+    controls.maxDistance = 90;
+    controls.target.set(0, 3, 0);
+
+    /* ========================================================
+       LIGHTING & ENVIRONMENT
+       ======================================================== */
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xdbeafe, 1.2);
+    dirLight.position.set(30, 45, 25);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.bias = -0.0005;
+    scene.add(dirLight);
+
+    const bluePoint = new THREE.PointLight(0x00f3ff, 2.0, 50);
+    bluePoint.position.set(0, 15, 0);
+    scene.add(bluePoint);
+
+    const purplePoint = new THREE.PointLight(0xa855f7, 1.5, 40);
+    purplePoint.position.set(12, 10, -8);
+    scene.add(purplePoint);
+
+    /* ========================================================
+       GROUND GRID & CYBERNETIC FLOOR
+       ======================================================== */
+    const gridHelper = new THREE.GridHelper(80, 80, 0x00f3ff, 0x1e293b);
+    gridHelper.position.y = 0.01;
+    scene.add(gridHelper);
+
+    // Floor baseplate
+    const floorGeo = new THREE.PlaneGeometry(80, 80);
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x070b14,
+      roughness: 0.8,
+      metalness: 0.2
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Sub-clusters / Zone Platforms
+    function createZonePlatform(x, z, width, depth, color, labelText) {
+      const geo = new THREE.BoxGeometry(width, 0.4, depth);
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x0f172a,
+        roughness: 0.5,
+        metalness: 0.7,
+        emissive: color,
+        emissiveIntensity: 0.15
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, 0.2, z);
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+
+      // Glowing border
+      const edgeGeo = new THREE.EdgesGeometry(geo);
+      const edgeMat = new THREE.LineBasicMaterial({ color: color, opacity: 0.5, transparent: true });
+      const wire = new THREE.LineSegments(edgeGeo, edgeMat);
+      mesh.add(wire);
+
+      return mesh;
+    }
+
+    // Platforms for zones:
+    // Zone 1: Edge & Inbound (Storage & Watcher & Equipment)
+    createZonePlatform(-8, -10, 22, 14, 0xf59e0b);
+    // Zone 2: Backend & Database (API, Redis, Postgres)
+    createZonePlatform(4, 0, 18, 18, 0x3b82f6);
+    // Zone 3: AI Engine & Celery
+    createZonePlatform(9, -6, 10, 10, 0xa855f7);
+    // Zone 4: Frontend / Web Access
+    createZonePlatform(-10, 8, 10, 16, 0x10b981);
+
+    /* ========================================================
+       BUILD 3D OBJECTS FOR DOCKER CONTAINERS
+       ======================================================== */
+    const interactiveMeshes = [];
+    const meshMap = {};
+    const labelsList = [];
+
+    // Container visual generator
+    ARCHITECTURE_DATA.services.forEach(svc => {
+      const group = new THREE.Group();
+      group.position.set(...svc.pos);
+
+      // Main Container Box
+      const geo = new THREE.BoxGeometry(...svc.size);
+
+      // High-tech Materials: Semi-transparent glass with solid glowing inner core
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: svc.color,
+        metalness: 0.3,
+        roughness: 0.2,
+        transmission: 0.5, // Glass effect
+        thickness: 0.8,
+        transparent: true,
+        opacity: 0.9,
+        reflectivity: 0.6,
+        clearcoat: 0.8,
+        clearcoatRoughness: 0.1
+      });
+
+      const box = new THREE.Mesh(geo, mat);
+      box.castShadow = true;
+      box.receiveShadow = true;
+      box.userData = svc; // Link data
+      group.add(box);
+
+      // Tech Edges Wireframe
+      const edges = new THREE.EdgesGeometry(geo);
+      const edgeMat = new THREE.LineBasicMaterial({
+        color: svc.color,
+        linewidth: 2,
+        transparent: true,
+        opacity: 0.8
+      });
+      const wireframe = new THREE.LineSegments(edges, edgeMat);
+      group.add(wireframe);
+
+      // Inner Core Glow (Mini server rack LED effect)
+      const coreGeo = new THREE.BoxGeometry(svc.size[0] * 0.75, svc.size[1] * 0.75, svc.size[2] * 0.75);
+      const coreMat = new THREE.MeshStandardMaterial({
+        color: svc.color,
+        emissive: svc.color,
+        emissiveIntensity: 0.4,
+        roughness: 0.5
+      });
+      const core = new THREE.Mesh(coreGeo, coreMat);
+      group.add(core);
+
+      // Decorative LED strips on front face
+      const stripCount = 4;
+      for (let i = 0; i < stripCount; i++) {
+        const stripGeo = new THREE.BoxGeometry(svc.size[0] * 0.6, 0.08, 0.05);
+        const stripMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+        const strip = new THREE.Mesh(stripGeo, stripMat);
+        const yOffset = (i - (stripCount - 1) / 2) * 0.45;
+        strip.position.set(0, yOffset, svc.size[2] / 2 + 0.02);
+        group.add(strip);
+      }
+
+      // Add to scene and collections
+      scene.add(group);
+      interactiveMeshes.push(box);
+      meshMap[svc.id] = { group, box, data: svc, core };
+
+      // Create DOM 3D Floating Tag
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'node-label-3d';
+      labelDiv.dataset.nodeId = svc.id;
+      labelDiv.innerHTML = `<strong>${svc.name}</strong>`;
+      labelDiv.style.borderColor = '#' + svc.color.toString(16).padStart(6, '0');
+      labelsContainer.appendChild(labelDiv);
+      labelsList.push({ element: labelDiv, group, offset: svc.size[1] / 2 + 0.8 });
+    });
+
+    /* ========================================================
+       DATA FLOW PIPES & ANIMATED PARTICLES
+       ======================================================== */
+    const particleSystems = [];
+    let particlesEnabled = true;
+
+    ARCHITECTURE_DATA.flows.forEach(flow => {
+      const fromObj = meshMap[flow.from];
+      const toObj = meshMap[flow.to];
+      if (!fromObj || !toObj) return;
+
+      const start = fromObj.group.position.clone();
+      const end = toObj.group.position.clone();
+
+      // Compute curved arch path between two containers
+      const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+      const dist = start.distanceTo(end);
+      mid.y += Math.min(dist * 0.35, 6.0); // arch height
+
+      const curve = new THREE.CatmullRomCurve3([start, mid, end]);
+
+      // Draw semi-transparent glowing tube
+      const tubeGeo = new THREE.TubeGeometry(curve, 32, 0.08, 8, false);
+      const tubeMat = new THREE.MeshBasicMaterial({
+        color: flow.color,
+        transparent: true,
+        opacity: 0.25,
+        wireframe: false
+      });
+      const tube = new THREE.Mesh(tubeGeo, tubeMat);
+      scene.add(tube);
+
+      // Data Stream Particle System along the curve
+      const particleCount = 18;
+      const pGeo = new THREE.BufferGeometry();
+      const positions = new Float32Array(particleCount * 3);
+      const progressArray = new Float32Array(particleCount);
+
+      for (let i = 0; i < particleCount; i++) {
+        progressArray[i] = i / particleCount;
+        const pt = curve.getPoint(progressArray[i]);
+        positions[i * 3] = pt.x;
+        positions[i * 3 + 1] = pt.y;
+        positions[i * 3 + 2] = pt.z;
+      }
+
+      pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+      // Glow Point Material
+      const pMat = new THREE.PointsMaterial({
+        color: flow.color,
+        size: 0.45,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending
+      });
+
+      const particlePoints = new THREE.Points(pGeo, pMat);
+      scene.add(particlePoints);
+
+      particleSystems.push({
+        curve,
+        geometry: pGeo,
+        progress: progressArray,
+        count: particleCount,
+        speed: 0.0035 + Math.random() * 0.002
+      });
+    });
+
+    /* ========================================================
+       RAYCASTING & INTERACTION
+       ======================================================== */
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let hoveredMesh = null;
+    let selectedMesh = null;
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    });
+
+    window.addEventListener('click', (e) => {
+      // Don't trigger if clicked on HUD
+      if (e.target.closest('.interactive')) return;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(interactiveMeshes);
+
+      if (intersects.length > 0) {
+        const hit = intersects[0].object;
+        selectNode(hit.userData);
+      }
+    });
+
+    function selectNode(svcData) {
+      selectedMesh = meshMap[svcData.id].box;
+
+      // Animate Camera to focus on node
+      const targetPos = meshMap[svcData.id].group.position.clone();
+      animateCameraFocus(targetPos);
+
+      // Update Inspector UI
+      updateDetailPanel(svcData);
+    }
+
+    function focusNode(nodeId) {
+      if (meshMap[nodeId]) {
+        selectNode(meshMap[nodeId].data);
+      }
+    }
+
+    /* ========================================================
+       HUD & INSPECTOR UI LOGIC
+       ======================================================== */
+    // Populate Left Legend
+    const legendContainer = document.getElementById('services-legend');
+    ARCHITECTURE_DATA.services.forEach(svc => {
+      const item = document.createElement('div');
+      item.className = 'legend-item';
+      const colorHex = '#' + svc.color.toString(16).padStart(6, '0');
+      item.innerHTML = `
+        <div class="legend-color-tag">
+          <div class="color-dot" style="background:${colorHex}; color:${colorHex};"></div>
+          <span>${svc.name}</span>
+        </div>
+        <span class="port-tag">${svc.ports.split(',')[0]}</span>
+      `;
+      item.onclick = () => focusNode(svc.id);
+      legendContainer.appendChild(item);
+    });
+
+    // Update Detail Panel with specs
+    function updateDetailPanel(svc) {
+      const panel = document.getElementById('detail-panel');
+      panel.classList.remove('hidden');
+
+      document.getElementById('detail-type').innerText = svc.type;
+      document.getElementById('detail-name').innerText = svc.name;
+      document.getElementById('detail-desc').innerText = svc.desc;
+
+      // Tech Tags
+      const tagsContainer = document.getElementById('detail-tags');
+      tagsContainer.innerHTML = '';
+      svc.tags.forEach(t => {
+        const tagSpan = document.createElement('span');
+        tagSpan.className = 'badge-tech';
+        tagSpan.innerText = t;
+        tagsContainer.appendChild(tagSpan);
+      });
+
+      // Spec table
+      const specTbody = document.getElementById('detail-specs');
+      specTbody.innerHTML = `
+        <tr><td class="spec-label">Image</td><td class="spec-value">${svc.image}</td></tr>
+        <tr><td class="spec-label">Ports / Expose</td><td class="spec-value">${svc.ports}</td></tr>
+        <tr><td class="spec-label">Depends On</td><td class="spec-value">${svc.depends_on.length ? svc.depends_on.join(', ') : 'None'}</td></tr>
+        <tr><td class="spec-label">Position (X,Y,Z)</td><td class="spec-value">[${svc.pos.join(', ')}]</td></tr>
+      `;
+
+      // Mounted Volumes & dependencies
+      const codeBox = document.getElementById('detail-code');
+      codeBox.innerHTML = `<strong># Mounts:</strong><br>${svc.mounts.map(m => '- ' + m).join('<br>')}<br><br><strong># Dependencies:</strong><br>${svc.depends_on.map(d => '- depends_on: ' + d).join('<br>') || '# No upstream dependencies'}`;
+    }
+
+    function closeDetailPanel() {
+      document.getElementById('detail-panel').classList.add('hidden');
+    }
+
+    // Default select FastAPI
+    updateDetailPanel(ARCHITECTURE_DATA.services.find(s => s.id === 'api'));
+
+    /* ========================================================
+       CAMERA VIEWS & CONTROLS
+       ======================================================== */
+    const views = {
+      iso: { pos: new THREE.Vector3(26, 26, 30), target: new THREE.Vector3(0, 3, 0) },
+      pipeline: { pos: new THREE.Vector3(14, 18, -4), target: new THREE.Vector3(5, 3.5, -6) },
+      backend: { pos: new THREE.Vector3(-18, 14, 20), target: new THREE.Vector3(-4, 3, 4) },
+      top: { pos: new THREE.Vector3(0, 48, 0.1), target: new THREE.Vector3(0, 0, 0) }
+    };
+
+    let tweenCamera = null;
+
+    function setCameraView(btn, viewKey) {
+      document.querySelectorAll('.btn-view').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const v = views[viewKey];
+      if (!v) return;
+
+      animateCamera(v.pos, v.target);
+    }
+
+    function resetCamera() {
+      animateCamera(views.iso.pos, views.iso.target);
+    }
+
+    function animateCamera(newPos, newTarget) {
+      const startPos = camera.position.clone();
+      const startTarget = controls.target.clone();
+      let alpha = 0;
+
+      function step() {
+        alpha += 0.04;
+        camera.position.lerpVectors(startPos, newPos, alpha);
+        controls.target.lerpVectors(startTarget, newTarget, alpha);
+        controls.update();
+
+        if (alpha < 1.0) {
+          requestAnimationFrame(step);
+        }
+      }
+      step();
+    }
+
+    function animateCameraFocus(targetMeshPos) {
+      const offset = new THREE.Vector3(12, 10, 14);
+      const newPos = targetMeshPos.clone().add(offset);
+      animateCamera(newPos, targetMeshPos);
+    }
+
+    function toggleParticles(enabled) {
+      particlesEnabled = enabled;
+      particleSystems.forEach(ps => {
+        ps.geometry.attributes.position.needsUpdate = true;
+      });
+    }
+
+    /* ========================================================
+       ANIMATION LOOP & RENDER
+       ======================================================== */
+    let clock = new THREE.Clock();
+    let embedVisible = true;
+    window.addEventListener('message', event => {
+      if (event.origin === location.origin && event.data && event.data.type === 'exam-3d-visible') embedVisible = !!event.data.visible;
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (document.hidden || !embedVisible) return;
+
+      const delta = clock.getDelta();
+      const time = clock.getElapsedTime();
+
+      // Controls update
+      controls.update();
+
+      // Raycaster Hover Pulse
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(interactiveMeshes);
+
+      if (intersects.length > 0) {
+        document.body.style.cursor = 'pointer';
+        const hit = intersects[0].object;
+        if (hoveredMesh !== hit) {
+          if (hoveredMesh && hoveredMesh !== selectedMesh) {
+            hoveredMesh.material.emissiveIntensity = 0.0;
+          }
+          hoveredMesh = hit;
+          hoveredMesh.material.emissive = new THREE.Color(hoveredMesh.userData.color);
+          hoveredMesh.material.emissiveIntensity = 0.35;
+        }
+      } else {
+        document.body.style.cursor = 'default';
+        if (hoveredMesh && hoveredMesh !== selectedMesh) {
+          hoveredMesh.material.emissiveIntensity = 0.0;
+          hoveredMesh = null;
+        }
+      }
+
+      // Gentle floating animation on cores
+      Object.values(meshMap).forEach(({ core, data }) => {
+        core.rotation.y = time * 0.4;
+        core.position.y = Math.sin(time * 2 + data.pos[0]) * 0.1;
+      });
+
+      // Update particle stream movement along curves
+      if (particlesEnabled) {
+        particleSystems.forEach(ps => {
+          const positions = ps.geometry.attributes.position.array;
+          for (let i = 0; i < ps.count; i++) {
+            ps.progress[i] += ps.speed;
+            if (ps.progress[i] > 1.0) ps.progress[i] -= 1.0;
+
+            const pt = ps.curve.getPoint(ps.progress[i]);
+            positions[i * 3] = pt.x;
+            positions[i * 3 + 1] = pt.y;
+            positions[i * 3 + 2] = pt.z;
+          }
+          ps.geometry.attributes.position.needsUpdate = true;
+        });
+      }
+
+      // Project 3D labels to 2D screen coordinates
+      labelsList.forEach(({ element, group, offset }) => {
+        const tempV = group.position.clone();
+        tempV.y += offset;
+        tempV.project(camera);
+
+        // Check if behind camera
+        if (tempV.z > 1) {
+          element.style.opacity = '0';
+          return;
+        }
+
+        const x = (tempV.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-(tempV.y * 0.5) + 0.5) * window.innerHeight;
+
+        element.style.left = `${x}px`;
+        element.style.top = `${y}px`;
+
+        // Hide if too far or camera angle extreme
+        const dist = camera.position.distanceTo(group.position);
+        element.style.opacity = dist > 60 ? '0' : '1';
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+    if (document.documentElement.classList.contains('embed') && parent !== window) parent.postMessage('exam-3d-ready', location.origin);
+
+    /* ========================================================
+       WINDOW RESIZE HANDLING
+       ======================================================== */
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
